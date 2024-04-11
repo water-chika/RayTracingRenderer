@@ -1,0 +1,6 @@
+[submodule "vec3"]
+	path = vec3
+	url = https://github.com/water-chika/vec3
+[submodule "image_outputer"]
+	path = image_outputer
+	url = https://github.com/water-chika/image_outputer
