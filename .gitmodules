@@ -4,3 +4,6 @@
 [submodule "image_outputer"]
 	path = image_outputer
 	url = https://github.com/water-chika/image_outputer
+[submodule "draw_pixels"]
+	path = draw_pixels
+	url = https://github.com/water-chika/draw_pixels

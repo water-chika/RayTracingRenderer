@@ -1,5 +1,6 @@
 #include <vec3.hpp>
 #include <image_outputer.hpp>
+#include <draw_pixels.hpp>
 #include "ray.hpp"
 #include "camera.hpp"
 
@@ -46,12 +47,21 @@ int main() {
 		- viewport_u / 2 - viewport_v / 2;
 	auto pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
 
-	water::output_ppm_image(image_width, image_height,
-		[pixel00_loc, pixel_delta_u, pixel_delta_v, camera](auto x, auto y) {
+	std::vector<uint32_t> image_data(image_width * image_height);
+	for (uint32_t j = 0; j < image_height; j++) {
+		for (uint32_t i = 0; i < image_width; i++) {
+			auto x = i, y = j;
 			auto pixel_center = pixel00_loc + (x * pixel_delta_u) + (y * pixel_delta_v);
 			auto ray_direction = pixel_center - camera.get_center();
-			water::ray r{ camera.get_center(), ray_direction };
-			return ray_color(r);
-		});
+			water::ray ray{ camera.get_center(), ray_direction };
+			auto [r, g, b] = ray_color(ray);
+			int ir = static_cast<int>(255.999 * r);
+			int ig = static_cast<int>(255.999 * g);
+			int ib = static_cast<int>(255.999 * b);
+			image_data[y * image_width + x] = (ir << 16) | (ig << 8) | ib;
+		}
+	}
+
+	water::draw_pixels(image_width, image_height, image_data.data());
 	return 0;
 }
