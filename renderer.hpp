@@ -15,7 +15,8 @@ namespace water {
 			m_image_width{image_width}, m_image_height{image_height},
 			m_camera{ 1.0, {2.0 * static_cast<double>(image_width) / image_height, 2.0}, {0,0,0} },
 			m_samples_per_pixel{ 10 },
-			m_samples_offset{ generate_samples_offset(10) }
+			m_samples_offset{ generate_samples_offset(10) },
+			m_max_depth{ 50 }
 		{
 			initialize();
 		}
@@ -48,6 +49,9 @@ namespace water {
 			m_samples_per_pixel = spp;
 			m_samples_offset = generate_samples_offset(m_samples_per_pixel);
 		}
+		void set_max_depth(uint32_t max_depth) {
+			m_max_depth = max_depth;
+		}
 	private:
 		void initialize() {
 			auto [viewport_width, viewport_height] = m_camera.get_viewport_resolution();
@@ -63,13 +67,24 @@ namespace water {
 			m_pixel00_loc = viewport_upper_left + 0.5 * (m_pixel_delta_u + m_pixel_delta_v);
 		}
 		vec3 ray_color(const ray& r, const hittable& world) const {
-			auto hit_res = world.hit(r, water::interval{ 0, std::numeric_limits<double>::infinity() });
-			if (hit_res.has_value()) {
-				return 0.5 * (hit_res.value().normal + water::vec3{ 1,1,1 });
+			double delay = 1.0;
+			ray emit_ray = r;
+			for (uint32_t depth = 0; depth < m_max_depth; depth++) {
+				auto hit_res = world.hit(emit_ray, water::interval{ 0.0001, std::numeric_limits<double>::infinity() });
+				if (hit_res.has_value()) {
+					auto hit_rec = hit_res.value();
+					uniform_hemisphere_distribution dist{ hit_rec.normal };
+					vec3 direction = dist(m_random_generator);
+					delay *= 0.5;
+					emit_ray = ray{ hit_rec.p, direction };
+				}
+				else {
+					auto unit_direction = r.direction().unit();
+					auto a = 0.5 * (unit_direction[1] + 1.0);
+					return delay * (1.0 - a) * water::vec3{ 1.0, 1.0, 1.0 } + a * water::vec3{ 0.5, 0.7, 1.0 };
+				}
 			}
-			auto unit_direction = r.direction().unit();
-			auto a = 0.5 * (unit_direction[1] + 1.0);
-			return (1.0 - a) * water::vec3{ 1.0, 1.0, 1.0 } + a * water::vec3{ 0.5, 0.7, 1.0 };
+			return vec3{ 0,0,0 };
 		}
 		static std::vector<std::pair<double, double>> generate_samples_offset(uint32_t samples_number) {
 			std::vector<std::pair<double, double>> offsets(samples_number);
@@ -89,6 +104,8 @@ namespace water {
 		vec3 m_pixel_delta_u;
 		vec3 m_pixel_delta_v;
 		uint32_t m_samples_per_pixel;
+		uint32_t m_max_depth;
 		std::vector<std::pair<double, double>> m_samples_offset;
+		mutable std::mt19937 m_random_generator;
 	};
 }
