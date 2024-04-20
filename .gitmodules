@@ -7,3 +7,6 @@
 [submodule "draw_pixels"]
 	path = draw_pixels
 	url = https://github.com/water-chika/draw_pixels
+[submodule "measure_duration"]
+	path = measure_duration
+	url = https://github.com/Water-Chika/measure_duration

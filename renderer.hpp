@@ -3,6 +3,7 @@
 #include "camera.hpp"
 #include "hittable.hpp"
 #include <draw_pixels.hpp>
+#include <measure_duration.hpp>
 
 #include <vector>
 #include <random>
@@ -23,23 +24,38 @@ namespace water {
 		void render(const hittable& world)
 		{
 			std::vector<uint32_t> image_data(m_image_width * m_image_height);
+			std::chrono::nanoseconds used_duration{ 0 };
+			std::chrono::seconds previous_remain_duration{ 0 };
 			for (uint32_t j = 0; j < m_image_height; j++) {
 				for (uint32_t i = 0; i < m_image_width; i++) {
-					vec3 pixel_color{ 0,0,0 };
-					for (auto [x_offset, y_offset] : m_samples_offset) {
-						auto x = i + x_offset, y = j + y_offset;
-						auto pixel_sample = m_pixel00_loc + (x * m_pixel_delta_u) + (y * m_pixel_delta_v);
-						auto ray_direction = pixel_sample - m_camera.get_center();
-						water::ray ray{ m_camera.get_center(), ray_direction };
-						pixel_color += ray_color(ray, world);
+					auto calculate_pixel = [i, j, this, &image_data, &world]() {
+						vec3 pixel_color{ 0,0,0 };
+						for (auto [x_offset, y_offset] : m_samples_offset) {
+							auto x = i + x_offset, y = j + y_offset;
+							auto pixel_sample = m_pixel00_loc + (x * m_pixel_delta_u) + (y * m_pixel_delta_v);
+							auto ray_direction = pixel_sample - m_camera.get_center();
+							water::ray ray{ m_camera.get_center(), ray_direction };
+							pixel_color += ray_color(ray, world);
+						}
+						pixel_color /= m_samples_per_pixel;
+						auto [r, g, b] = pixel_color;
+						constexpr interval intensity(0.0, 0.999);
+						int ir = static_cast<int>(255.999 * intensity.clamp(r));
+						int ig = static_cast<int>(255.999 * intensity.clamp(g));
+						int ib = static_cast<int>(255.999 * intensity.clamp(b));
+						image_data[j * m_image_width + i] = (ir << 16) | (ig << 8) | ib;
+						};
+					auto duration = water::measure_duration(calculate_pixel);
+					used_duration += duration;
+					auto average_duration = used_duration / ((j+1) * m_image_width + i+1);
+					auto remain_duration = std::chrono::duration_cast<std::chrono::seconds>(
+						average_duration * ((m_image_height - j) * m_image_width + (m_image_width - i)));
+					if (remain_duration != previous_remain_duration) {
+						previous_remain_duration = remain_duration;
+						std::clog << "\raverage pixel duration:" << std::setw(8) << average_duration <<
+							", remain time: " << std::setw(8) << remain_duration
+							<< "     ";
 					}
-					pixel_color /= m_samples_per_pixel;
-					auto [r, g, b] = pixel_color;
-					constexpr interval intensity(0.0, 0.999);
-					int ir = static_cast<int>(255.999 * intensity.clamp(r));
-					int ig = static_cast<int>(255.999 * intensity.clamp(g));
-					int ib = static_cast<int>(255.999 * intensity.clamp(b));
-					image_data[j * m_image_width + i] = (ir << 16) | (ig << 8) | ib;
 				}
 			}
 
