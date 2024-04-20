@@ -24,7 +24,7 @@ int main() {
 	world.add(make_shared<sphere>(vec3(0, -100.5, -1), 100));
 
 	water::renderer renderer{ image_width, image_height };
-	renderer.set_samples_per_pixels(50);
+	renderer.set_samples_per_pixels(512);
 	renderer.set_max_depth(50);
 	renderer.render(world);
 

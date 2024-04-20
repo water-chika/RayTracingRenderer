@@ -21,3 +21,4 @@ set_target_properties(ray_tracing_renderer_test PROPERTIES CXX_STANDARD 23)
 target_link_libraries(
     ray_tracing_renderer_test 
     PUBLIC vec3 image_outputer draw_pixels measure_duration)
+target_compile_options(ray_tracing_renderer_test PUBLIC /Qpar)

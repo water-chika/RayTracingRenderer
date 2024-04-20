@@ -26,7 +26,9 @@ namespace water {
 			std::vector<uint32_t> image_data(m_image_width * m_image_height);
 			std::chrono::nanoseconds used_duration{ 0 };
 			std::chrono::seconds previous_remain_duration{ 0 };
-			for (uint32_t j = 0; j < m_image_height; j++) {
+			#pragma loop(hint_parallel(16))
+			#pragma loop(ivdep) // ivdep will force this through.
+			for (int32_t j = 0, j_max = m_image_height; j < j_max; j++) {
 				for (uint32_t i = 0; i < m_image_width; i++) {
 					auto calculate_pixel = [i, j, this, &image_data, &world]() {
 						vec3 pixel_color{ 0,0,0 };
@@ -45,7 +47,8 @@ namespace water {
 						int ib = static_cast<int>(255.999 * intensity.clamp(b));
 						image_data[j * m_image_width + i] = (ir << 16) | (ig << 8) | ib;
 						};
-					auto duration = water::measure_duration(calculate_pixel);
+					calculate_pixel();
+					/*auto duration = water::measure_duration(calculate_pixel);
 					used_duration += duration;
 					auto average_duration = used_duration / ((j+1) * m_image_width + i+1);
 					auto remain_duration = std::chrono::duration_cast<std::chrono::seconds>(
@@ -53,9 +56,11 @@ namespace water {
 					if (remain_duration != previous_remain_duration) {
 						previous_remain_duration = remain_duration;
 						std::clog << "\raverage pixel duration:" << std::setw(8) << average_duration <<
-							", remain time: " << std::setw(8) << remain_duration
+							", used duration: " << std::setw(8) <<
+							std::chrono::duration_cast<std::chrono::seconds>(used_duration) <<
+							", remain duration: " << std::setw(8) << remain_duration
 							<< "     ";
-					}
+					}*/
 				}
 			}
 
